@@ -1,0 +1,1436 @@
+{
+  "name": "AutoInstaPost",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 1. TRIGGERS\nSchedule (daily) or manual test run.\nNo secrets live here.",
+        "height": 300,
+        "width": 300,
+        "color": 4
+      },
+      "id": "sticky-triggers",
+      "name": "sticky-triggers",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1720,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2. CONFIG\nAll env-driven settings.\nEdit `.env` / n8n credentials, never this JSON.",
+        "height": 420,
+        "width": 300,
+        "color": 4
+      },
+      "id": "sticky-config",
+      "name": "sticky-config",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1720,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 3. AI — TOPIC GENERATION\nReads history from Google Sheets,\ngenerates a topic, loops if it's a duplicate\n(max 5 retries).",
+        "height": 520,
+        "width": 760,
+        "color": 6
+      },
+      "id": "sticky-topic-ai",
+      "name": "sticky-topic-ai",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1380,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 4. AI — IMAGE PROMPT",
+        "height": 200,
+        "width": 260,
+        "color": 6
+      },
+      "id": "sticky-prompt-ai",
+      "name": "sticky-prompt-ai",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 5. IMAGE GENERATION\nPollinations AI (100% FREE, no key needed).\nBuilds a direct image URL; Cloudinary\nfetches it remotely below.",
+        "height": 200,
+        "width": 300,
+        "color": 3
+      },
+      "id": "sticky-image",
+      "name": "sticky-image",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -260,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 6. STORAGE\nCloudinary hosting -> secure_url",
+        "height": 200,
+        "width": 260,
+        "color": 3
+      },
+      "id": "sticky-storage",
+      "name": "sticky-storage",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 7. AI — CAPTION",
+        "height": 200,
+        "width": 260,
+        "color": 6
+      },
+      "id": "sticky-caption-ai",
+      "name": "sticky-caption-ai",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        380,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 8. INSTAGRAM PUBLISHING\nContainer -> poll status -> publish -> permalink.\nEvery node: retry + timeout + continueOnFail.",
+        "height": 520,
+        "width": 900,
+        "color": 2
+      },
+      "id": "sticky-instagram",
+      "name": "sticky-instagram",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        680,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 9. LOGGING\nAppend every attempt (success or fail)\nto Google Sheets for a full audit trail.",
+        "height": 260,
+        "width": 360,
+        "color": 7
+      },
+      "id": "sticky-logging",
+      "name": "sticky-logging",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1640,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 10. NOTIFICATIONS\nTelegram alert either way.",
+        "height": 260,
+        "width": 360,
+        "color": 7
+      },
+      "id": "sticky-notify",
+      "name": "sticky-notify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1640,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger (Daily 10AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1680,
+        180
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger (Test)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1680,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-ig-user-id",
+              "name": "ig_user_id",
+              "type": "string",
+              "value": "={{ $env.IG_BUSINESS_ACCOUNT_ID }}"
+            },
+            {
+              "id": "cfg-sheet-id",
+              "name": "sheet_id",
+              "type": "string",
+              "value": "={{ $env.GOOGLE_SHEET_ID }}"
+            },
+            {
+              "id": "cfg-sheet-tab",
+              "name": "sheet_tab",
+              "type": "string",
+              "value": "={{ $env.GOOGLE_SHEET_TAB || 'Posts' }}"
+            },
+            {
+              "id": "cfg-telegram-chat",
+              "name": "telegram_chat_id",
+              "type": "string",
+              "value": "={{ $env.TELEGRAM_CHAT_ID }}"
+            },
+            {
+              "id": "cfg-cloud-name",
+              "name": "cloudinary_cloud_name",
+              "type": "string",
+              "value": "={{ $env.CLOUDINARY_CLOUD_NAME }}"
+            },
+            {
+              "id": "cfg-cloud-preset",
+              "name": "cloudinary_upload_preset",
+              "type": "string",
+              "value": "={{ $env.CLOUDINARY_UPLOAD_PRESET }}"
+            },
+            {
+              "id": "cfg-max-retries",
+              "name": "max_topic_retries",
+              "type": "number",
+              "value": 5
+            },
+            {
+              "id": "cfg-account-label",
+              "name": "account_label",
+              "type": "string",
+              "value": "={{ $env.IG_ACCOUNT_LABEL || 'nature_page_01' }}"
+            }
+          ]
+        }
+      },
+      "id": "init-config",
+      "name": "Init Config (env-driven)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1420,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.sheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.sheet_tab }}",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "get-existing-topics",
+      "name": "Google Sheets - Get Existing Topics",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -1320,
+        780
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Flatten all previously used topics into a lowercase array for comparison\nconst topics = items.map(i => (i.json.Topic || '').toString().trim().toLowerCase()).filter(Boolean);\nreturn [{ json: { usedTopics: topics, retryCount: 0 } }];"
+      },
+      "id": "extract-used-topics",
+      "name": "Code - Build Used-Topics List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [ { role: 'system', content: 'You are a creative director for a high-end nature Instagram page. You output ONLY plain text, never markdown, never quotes, never numbering, never explanations.' }, { role: 'user', content: `Generate ONE short, specific nature scene topic (5-8 words), different in location, season, and mood from anything on this list: ${JSON.stringify($json.usedTopics)}. Retry attempt: ${$json.retryCount}. Respond with ONLY the topic text.` } ], temperature: 1.0, max_tokens: 60 }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "generate-topic",
+      "name": "Groq - Generate Nature Topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -920,
+        780
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.choices?.[0]?.message?.content || '';\nconst topic = raw.replace(/[\\n\\r\"']/g, '').trim();\nconst used = $('Code - Build Used-Topics List').first().json.usedTopics;\nconst retryCount = $('Code - Build Used-Topics List').first().json.retryCount;\nconst isDuplicate = used.includes(topic.toLowerCase());\nreturn [{ json: { topic, isDuplicate, retryCount } }];"
+      },
+      "id": "parse-check-topic",
+      "name": "Code - Parse & Check Duplicate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "dup-cond",
+              "leftValue": "={{ $json.isDuplicate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "retry-cond",
+              "leftValue": "={{ $json.retryCount }}",
+              "rightValue": "={{ $('Init Config (env-driven)').first().json.max_topic_retries }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-duplicate-retry",
+      "name": "IF Duplicate & Retries Left",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -520,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ...$json, retryCount: $json.retryCount + 1 } }];"
+      },
+      "id": "increment-retry",
+      "name": "Code - Increment Retry Counter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -520,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Safety net: after max retries, force uniqueness with a timestamp suffix\nlet topic = $json.topic;\nif ($json.isDuplicate) {\n  topic = `${topic} (${new Date().toISOString().slice(0,10)})`;\n}\nreturn [{ json: { topic } }];"
+      },
+      "id": "finalize-topic",
+      "name": "Code - Finalize Unique Topic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [ { role: 'system', content: 'You write cinematic AI image-generation prompts for FLUX/Pollinations. You output ONLY the prompt text as comma-separated tags, no preamble, no markdown. HARD LIMIT: your entire output must be under 60 words and under 400 characters. Never repeat a tag or synonym twice.' }, { role: 'user', content: `Write a concise, highly detailed cinematic AI image-generation prompt (STRICTLY under 60 words) for a portfolio-quality nature photograph of: \"${$json.topic}\". Cover, briefly: lighting, composition, atmosphere, camera/lens, color palette. Include the quality tags: ultra detailed, National Geographic quality, 8K, masterpiece — each ONCE only. Output ONLY the prompt text, no repetition.` } ], temperature: 0.7, max_tokens: 110 }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "generate-image-prompt",
+      "name": "Groq - Generate Image Prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -140,
+        780
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.choices?.[0]?.message?.content || '';\nlet prompt = raw.trim();\n// Safety net: hard-cap length regardless of what the model returns, so the\n// downstream Pollinations URL can never blow past safe URL-length limits.\nconst MAX_CHARS = 400;\nif (prompt.length > MAX_CHARS) {\n  const cut = prompt.slice(0, MAX_CHARS);\n  const lastComma = cut.lastIndexOf(',');\n  prompt = (lastComma > 100 ? cut.slice(0, lastComma) : cut).trim();\n}\n// Also collapse any accidental duplicate comma-separated tags\nconst seen = new Set();\nprompt = prompt.split(',').map(t => t.trim()).filter(t => {\n  const key = t.toLowerCase();\n  if (!t || seen.has(key)) return false;\n  seen.add(key);\n  return true;\n}).join(', ');\nreturn [{ json: { image_prompt: prompt, topic: $('Code - Finalize Unique Topic').first().json.topic } }];"
+      },
+      "id": "parse-image-prompt",
+      "name": "Code - Parse Image Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "poll-image-url",
+              "name": "image_url_generated",
+              "type": "string",
+              "value": "=https://image.pollinations.ai/prompt/{{ encodeURIComponent($json.image_prompt + ', ultra realistic nature photography, professional DSLR, natural lighting, high detail') }}?width=1080&height=1080&nologo=true&model=flux&seed={{ Date.now() }}"
+            },
+            {
+              "id": "poll-topic-passthrough",
+              "name": "topic",
+              "type": "string",
+              "value": "={{ $json.topic }}"
+            },
+            {
+              "id": "poll-prompt-passthrough",
+              "name": "image_prompt",
+              "type": "string",
+              "value": "={{ $json.image_prompt }}"
+            }
+          ]
+        }
+      },
+      "id": "generate-image",
+      "name": "Pollinations - Build Image URL (FREE)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cloudinary.com/v1_1/{{ $env.CLOUDINARY_CLOUD_NAME }}/image/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formData",
+              "name": "file",
+              "value": "={{ $json.image_url_generated }}"
+            },
+            {
+              "name": "upload_preset",
+              "value": "={{ $env.CLOUDINARY_UPLOAD_PRESET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "upload-cloudinary",
+      "name": "Cloudinary - Host Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        780
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [ { role: 'system', content: 'You write Instagram captions for a nature page. You output ONLY plain text, no markdown, no surrounding quotes.' }, { role: 'user', content: `Write an Instagram caption for a nature photo of: \"${$('Pollinations - Build Image URL (FREE)').first().json.topic}\". Structure exactly: (1) an emotional 1-2 sentence hook with a fitting emoji, (2) one SEO-friendly descriptive sentence naming the location/subject, (3) a short call-to-action inviting saves/shares/comments, (4) a blank line, then 15-25 relevant SEO hashtags (mix of broad and niche, no repeats). Output ONLY the caption.` } ], temperature: 0.9, max_tokens: 400 }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "generate-caption",
+      "name": "Groq - Generate Caption + Hashtags",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        780
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.choices?.[0]?.message?.content || '';\nreturn [{ json: { caption: raw.trim() } }];"
+      },
+      "id": "parse-caption",
+      "name": "Code - Parse Caption",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "m-topic",
+              "name": "topic",
+              "type": "string",
+              "value": "={{ $('Pollinations - Build Image URL (FREE)').first().json.topic }}"
+            },
+            {
+              "id": "m-prompt",
+              "name": "image_prompt",
+              "type": "string",
+              "value": "={{ $('Pollinations - Build Image URL (FREE)').first().json.image_prompt }}"
+            },
+            {
+              "id": "m-caption",
+              "name": "caption",
+              "type": "string",
+              "value": "={{ $('Code - Parse Caption').first().json.caption }}"
+            },
+            {
+              "id": "m-image-url",
+              "name": "image_url",
+              "type": "string",
+              "value": "={{ $('Cloudinary - Host Image').first().json.secure_url }}"
+            },
+            {
+              "id": "m-ig-user",
+              "name": "ig_user_id",
+              "type": "string",
+              "value": "={{ $('Init Config (env-driven)').first().json.ig_user_id }}"
+            },
+            {
+              "id": "m-sheet-id",
+              "name": "sheet_id",
+              "type": "string",
+              "value": "={{ $('Init Config (env-driven)').first().json.sheet_id }}"
+            },
+            {
+              "id": "m-sheet-tab",
+              "name": "sheet_tab",
+              "type": "string",
+              "value": "={{ $('Init Config (env-driven)').first().json.sheet_tab }}"
+            },
+            {
+              "id": "m-telegram",
+              "name": "telegram_chat_id",
+              "type": "string",
+              "value": "={{ $('Init Config (env-driven)').first().json.telegram_chat_id }}"
+            },
+            {
+              "id": "m-date",
+              "name": "date",
+              "type": "string",
+              "value": "={{ $now.toISODate() }}"
+            }
+          ]
+        }
+      },
+      "id": "merge-fields",
+      "name": "Merge All Content Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1260,
+        780
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.ig_user_id }}/media",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json.image_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.caption }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.IG_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "create-container",
+      "name": "IG - Create Media Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        740,
+        620
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "amount": 6,
+        "unit": "seconds"
+      },
+      "id": "wait-container",
+      "name": "Wait (Container Processing)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('IG - Create Media Container').item.json.id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "status_code"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.IG_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "check-container-status",
+      "name": "IG - Check Container Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        620
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "ready-cond",
+              "leftValue": "={{ $json.status_code }}",
+              "rightValue": "FINISHED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-container-ready",
+      "name": "IF Container Ready",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1340,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('Merge All Content Fields').first().json.ig_user_id }}/media_publish",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $('IG - Create Media Container').item.json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.IG_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "publish-post",
+      "name": "IG - Publish Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        560
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "permalink"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.IG_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "get-permalink",
+      "name": "IG - Get Post Permalink",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        560
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "pub-success-cond",
+              "leftValue": "={{ $json.permalink }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-published",
+      "name": "IF Published Successfully",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1940,
+        560
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "noop-error-catch",
+      "name": "NoOp - Error Branch Merge Point",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consolidate whatever data/error made it here into one clean failure record\nconst src = items[0]?.json || {};\nconst errorMessage = src.error?.message || src.message || JSON.stringify(src).slice(0, 500) || 'Unknown error - see execution log';\nreturn [{ json: {\n  date: new Date().toISOString().slice(0,10),\n  topic: $('Pollinations - Build Image URL (FREE)').first()?.json?.topic || 'N/A',\n  caption: '',\n  image_prompt: '',\n  image_url: '',\n  instagram_url: '',\n  status: 'FAILED',\n  error_message: errorMessage\n} }];"
+      },
+      "id": "format-error",
+      "name": "Code - Format Error Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Merge All Content Fields').first().json.sheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Merge All Content Fields').first().json.sheet_tab }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $('Merge All Content Fields').first().json.date }}",
+            "Topic": "={{ $('Merge All Content Fields').first().json.topic }}",
+            "Prompt": "={{ $('Merge All Content Fields').first().json.image_prompt }}",
+            "Caption": "={{ $('Merge All Content Fields').first().json.caption }}",
+            "Image URL": "={{ $('Merge All Content Fields').first().json.image_url }}",
+            "Instagram URL": "={{ $json.permalink }}",
+            "Status": "SUCCESS"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-success",
+      "name": "Google Sheets - Log Success Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2140,
+        460
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_TAB || 'Posts' }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json.date }}",
+            "Topic": "={{ $json.topic }}",
+            "Prompt": "={{ $json.image_prompt }}",
+            "Caption": "={{ $json.caption }}",
+            "Image URL": "={{ $json.image_url }}",
+            "Instagram URL": "={{ $json.instagram_url }}",
+            "Status": "={{ $json.status }}",
+            "Error": "={{ $json.error_message }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-failure",
+      "name": "Google Sheets - Log Failure Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1740,
+        960
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Merge All Content Fields').first().json.telegram_chat_id }}",
+        "text": "=✅ *Instagram Post Published*\n\n*Topic:* {{ $('Merge All Content Fields').first().json.topic }}\n*Time:* {{ $now.toFormat('yyyy-LL-dd HH:mm') }}\n*Status:* Success\n*Instagram URL:* {{ $('IG - Get Post Permalink').first().json.permalink }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-success",
+      "name": "Telegram - Send Success Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2140,
+        700
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CRED_ID",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=❌ *Instagram Post Failed*\n\n*Topic:* {{ $json.topic }}\n*Time:* {{ $now.toFormat('yyyy-LL-dd HH:mm') }}\n*Status:* Failed\n*Error:* {{ $json.error_message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-failure",
+      "name": "Telegram - Send Failure Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1940,
+        960
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CRED_ID",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (Daily 10AM)": {
+      "main": [
+        [
+          {
+            "node": "Init Config (env-driven)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger (Test)": {
+      "main": [
+        [
+          {
+            "node": "Init Config (env-driven)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Config (env-driven)": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Get Existing Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Get Existing Topics": {
+      "main": [
+        [
+          {
+            "node": "Code - Build Used-Topics List",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Build Used-Topics List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Build Used-Topics List": {
+      "main": [
+        [
+          {
+            "node": "Groq - Generate Nature Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq - Generate Nature Topic": {
+      "main": [
+        [
+          {
+            "node": "Code - Parse & Check Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Parse & Check Duplicate": {
+      "main": [
+        [
+          {
+            "node": "IF Duplicate & Retries Left",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Duplicate & Retries Left": {
+      "main": [
+        [
+          {
+            "node": "Code - Increment Retry Counter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Finalize Unique Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Increment Retry Counter": {
+      "main": [
+        [
+          {
+            "node": "Groq - Generate Nature Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Finalize Unique Topic": {
+      "main": [
+        [
+          {
+            "node": "Groq - Generate Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq - Generate Image Prompt": {
+      "main": [
+        [
+          {
+            "node": "Code - Parse Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Parse Image Prompt": {
+      "main": [
+        [
+          {
+            "node": "Pollinations - Build Image URL (FREE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pollinations - Build Image URL (FREE)": {
+      "main": [
+        [
+          {
+            "node": "Cloudinary - Host Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cloudinary - Host Image": {
+      "main": [
+        [
+          {
+            "node": "Groq - Generate Caption + Hashtags",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq - Generate Caption + Hashtags": {
+      "main": [
+        [
+          {
+            "node": "Code - Parse Caption",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Parse Caption": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Content Fields": {
+      "main": [
+        [
+          {
+            "node": "IG - Create Media Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG - Create Media Container": {
+      "main": [
+        [
+          {
+            "node": "Wait (Container Processing)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (Container Processing)": {
+      "main": [
+        [
+          {
+            "node": "IG - Check Container Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG - Check Container Status": {
+      "main": [
+        [
+          {
+            "node": "IF Container Ready",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Container Ready": {
+      "main": [
+        [
+          {
+            "node": "IG - Publish Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait (Container Processing)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG - Publish Post": {
+      "main": [
+        [
+          {
+            "node": "IG - Get Post Permalink",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG - Get Post Permalink": {
+      "main": [
+        [
+          {
+            "node": "IF Published Successfully",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Published Successfully": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Log Success Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Log Success Row": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Send Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Log Failure Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Log Failure Row": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Send Failure Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "pinData": {}
+}

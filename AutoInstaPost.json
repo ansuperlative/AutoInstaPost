@@ -67,7 +67,7 @@
     },
     {
       "parameters": {
-        "content": "## 5. IMAGE GENERATION\nPollinations AI (100% FREE, no key needed).\nBuilds a direct image URL; Cloudinary\nfetches it remotely below.",
+        "content": "## 5. IMAGE GENERATION\nPollinations: light business photo, no text.\nLight brand layout (logo, headline, stage,\nhashtags) is added by Cloudinary\n(Code - Build Branded Image).",
         "height": 200,
         "width": 300,
         "color": 3
@@ -212,7 +212,7 @@
               "id": "cfg-sheet-tab",
               "name": "sheet_tab",
               "type": "string",
-              "value": "={{ $env.GOOGLE_SHEET_TAB || 'Posts' }}"
+              "value": "={{ $env.GOOGLE_SHEET_TAB || 'posts' }}"
             },
             {
               "id": "cfg-telegram-chat",
@@ -269,7 +269,8 @@
           "value": "={{ $json.sheet_tab }}",
           "mode": "name"
         },
-        "options": {}
+        "options": {},
+        "authentication": "serviceAccount"
       },
       "id": "get-existing-topics",
       "name": "Google Sheets - Get Existing Topics",
@@ -280,9 +281,9 @@
         780
       ],
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CRED_ID",
-          "name": "Google Sheets account"
+        "googleApi": {
+          "id": "2JOcPfbbZEVlHlco",
+          "name": "Google Service Account (n8n-950)"
         }
       },
       "onError": "continueErrorOutput",
@@ -293,7 +294,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Flatten all previously used topics into a lowercase array for comparison\nconst topics = items.map(i => (i.json.Topic || '').toString().trim().toLowerCase()).filter(Boolean);\nreturn [{ json: { usedTopics: topics, retryCount: 0 } }];"
+        "jsCode": "// Flatten all previously used topics into a lowercase array for comparison\nconst topics = items.map(i => (i.json.Topic || '').toString().trim().toLowerCase()).filter(Boolean);\n// Rotate through development stages by post count, so the feed covers the whole lifecycle\nconst STAGES = [\n  'Discovery і збір вимог', 'Оцінка та планування', 'UX-дослідження', 'UI-дизайн',\n  'Архітектура', 'Вибір технологічного стеку', 'Бекенд-розробка', 'Фронтенд-розробка',\n  'Інтеграції та API', 'Тестування і QA', 'DevOps і CI/CD', 'Безпека',\n  'Продуктивність', 'Реліз', 'Підтримка й розвиток', 'Комунікація з клієнтом',\n];\nconst stage = STAGES[topics.length % STAGES.length];\nreturn [{ json: { usedTopics: topics, retryCount: 0, stage } }];"
       },
       "id": "extract-used-topics",
       "name": "Code - Build Used-Topics List",
@@ -323,7 +324,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [ { role: 'system', content: 'You are a creative director for a high-end nature Instagram page. You output ONLY plain text, never markdown, never quotes, never numbering, never explanations.' }, { role: 'user', content: `Generate ONE short, specific nature scene topic (5-8 words), different in location, season, and mood from anything on this list: ${JSON.stringify($json.usedTopics)}. Retry attempt: ${$json.retryCount}. Respond with ONLY the topic text.` } ], temperature: 1.0, max_tokens: 60 }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', reasoning_effort: 'low', messages: [ { role: 'system', content: \"Ти контент-стратег Instagram-сторінки BramblingTech — IT-компанії, що робить кастомну веб-розробку проєктів з нуля для стартапів і малого та середнього бізнесу: від збору вимог до релізу й підтримки. Пиши грамотною українською мовою. Жодних русизмів і російських слів (наприклад, «переделка», «уровень», «следующий»). Англійські IT-терміни (MVP, QA, CI/CD, API) допустимі. Відповідаєш ЛИШЕ текстом теми: без markdown, лапок, нумерації й пояснень.\" }, { role: 'user', content: `Етап розробки для цього поста: «${$('Code - Build Used-Topics List').first().json.stage}». Придумай ОДНУ конкретну тему експертного поста (6-12 слів) саме про цей етап. Тема має бути практичною й корисною для замовника, фаундера або продакт-менеджера. Не повторюй і не перефразовуй жодну з уже використаних тем: ${JSON.stringify($('Code - Build Used-Topics List').first().json.usedTopics)}. Спроба: ${$json.retryCount || 0}. Відповідай ЛИШЕ текстом теми.` } ], temperature: 1.0, max_tokens: 1000 }) }}",
         "options": {
           "timeout": 15000
         }
@@ -343,7 +344,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $json.choices?.[0]?.message?.content || '';\nconst topic = raw.replace(/[\\n\\r\"']/g, '').trim();\nconst used = $('Code - Build Used-Topics List').first().json.usedTopics;\nconst retryCount = $('Code - Build Used-Topics List').first().json.retryCount;\nconst isDuplicate = used.includes(topic.toLowerCase());\nreturn [{ json: { topic, isDuplicate, retryCount } }];"
+        "jsCode": "const raw = $json.choices?.[0]?.message?.content || '';\nconst topic = raw.replace(/[\\n\\r\"'«»]/g, '').replace(/[.]+$/, '').trim();\nconst used = $('Code - Build Used-Topics List').first().json.usedTopics;\nlet retryCount = 0;\ntry { retryCount = $('Code - Increment Retry Counter').last().json.retryCount || 0; } catch (e) {}\nconst isDuplicate = used.includes(topic.toLowerCase());\nreturn [{ json: { topic, isDuplicate, retryCount } }];"
       },
       "id": "parse-check-topic",
       "name": "Code - Parse & Check Duplicate",
@@ -439,7 +440,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [ { role: 'system', content: 'You write cinematic AI image-generation prompts for FLUX/Pollinations. You output ONLY the prompt text as comma-separated tags, no preamble, no markdown. HARD LIMIT: your entire output must be under 60 words and under 400 characters. Never repeat a tag or synonym twice.' }, { role: 'user', content: `Write a concise, highly detailed cinematic AI image-generation prompt (STRICTLY under 60 words) for a portfolio-quality nature photograph of: \"${$json.topic}\". Cover, briefly: lighting, composition, atmosphere, camera/lens, color palette. Include the quality tags: ultra detailed, National Geographic quality, 8K, masterpiece — each ONCE only. Output ONLY the prompt text, no repetition.` } ], temperature: 0.7, max_tokens: 110 }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [ { role: 'system', content: \"Ти арт-директор Instagram-сторінки IT-компанії BramblingTech. Відповідаєш ЛИШЕ валідним JSON-обʼєктом, без markdown.\" }, { role: 'user', content: `Тема поста: \"${$json.topic}\". Етап: \"${$('Code - Build Used-Topics List').first().json.stage}\". Поверни JSON з трьома полями:\\n\"stage_label\": коротка назва етапу для плашки, 1-3 слова українською (англ. терміни на кшталт Discovery, QA, CI/CD допустимі);\\n\"headline\": заголовок на картинці, українською, 4-9 слів, до 60 символів, чіпкий і експертний, без крапки в кінці, без емодзі;\\n\"image_prompt\": англійською, до 55 слів, теги через кому. Стиль: editorial corporate stock photography, світлий тон: bright modern office, white and light blue interior, soft natural daylight. Сцена має асоціюватися з темою. Якщо в кадрі люди — це реальні дорослі європейські бізнес-професіонали в діловому або business casual одязі (менеджери, розробники, клієнти на зустрічі), з природними обличчями, natural skin texture, realistic proportions. Можна й без людей: робоче місце з ноутбуком, whiteboard зі стікерами, макети інтерфейсу на моніторі. Додай тип камери й обʼєктив. На зображенні НЕ має бути тексту, літер, логотипів і написів.` } ], temperature: 0.7, max_tokens: 1500 }) }}",
         "options": {
           "timeout": 15000
         }
@@ -459,7 +460,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $json.choices?.[0]?.message?.content || '';\nlet prompt = raw.trim();\n// Safety net: hard-cap length regardless of what the model returns, so the\n// downstream Pollinations URL can never blow past safe URL-length limits.\nconst MAX_CHARS = 400;\nif (prompt.length > MAX_CHARS) {\n  const cut = prompt.slice(0, MAX_CHARS);\n  const lastComma = cut.lastIndexOf(',');\n  prompt = (lastComma > 100 ? cut.slice(0, lastComma) : cut).trim();\n}\n// Also collapse any accidental duplicate comma-separated tags\nconst seen = new Set();\nprompt = prompt.split(',').map(t => t.trim()).filter(t => {\n  const key = t.toLowerCase();\n  if (!t || seen.has(key)) return false;\n  seen.add(key);\n  return true;\n}).join(', ');\nreturn [{ json: { image_prompt: prompt, topic: $('Code - Finalize Unique Topic').first().json.topic } }];"
+        "jsCode": "const raw = $json.choices?.[0]?.message?.content || '';\nconst topic = $('Code - Finalize Unique Topic').first().json.topic;\nlet obj = {};\ntry { obj = JSON.parse(raw.replace(/^```(?:json)?\\s*|\\s*```$/g, '')); } catch (e) {}\n\nlet prompt = (obj.image_prompt || '').toString().trim()\n  || 'modern software development team at work, laptops with code, dark office, blue accent lighting, cinematic';\n// Safety net: hard-cap length so the Pollinations URL stays within safe limits.\nconst MAX_CHARS = 400;\nif (prompt.length > MAX_CHARS) {\n  const cut = prompt.slice(0, MAX_CHARS);\n  const lastComma = cut.lastIndexOf(',');\n  prompt = (lastComma > 100 ? cut.slice(0, lastComma) : cut).trim();\n}\n// Collapse any accidental duplicate comma-separated tags\nconst seen = new Set();\nprompt = prompt.split(',').map(t => t.trim()).filter(t => {\n  const key = t.toLowerCase();\n  if (!t || seen.has(key)) return false;\n  seen.add(key);\n  return true;\n}).join(', ');\n\n// Text rendered on the image: keep it short so it fits the layout\nconst stage_label = (obj.stage_label || 'Веб-розробка').toString().trim().slice(0, 30);\nlet headline = (obj.headline || topic).toString().trim().replace(/[.!]+$/, '');\nif (headline.length > 70) headline = headline.slice(0, 70).replace(/\\s+\\S*$/, '');\n\nreturn [{ json: { image_prompt: prompt, topic, stage_label, headline } }];"
       },
       "id": "parse-image-prompt",
       "name": "Code - Parse Image Prompt",
@@ -478,7 +479,7 @@
               "id": "poll-image-url",
               "name": "image_url_generated",
               "type": "string",
-              "value": "=https://image.pollinations.ai/prompt/{{ encodeURIComponent($json.image_prompt + ', ultra realistic nature photography, professional DSLR, natural lighting, high detail') }}?width=1080&height=1080&nologo=true&model=flux&seed={{ Date.now() }}"
+              "value": "=https://image.pollinations.ai/prompt/{{ encodeURIComponent($json.image_prompt + ', ultra realistic photography, bright high-key lighting, high detail, no text, no letters, no logos, no watermark') }}?width=1280&height=720&nologo=true&model=flux&seed={{ Date.now() % 2147483647 }}"
             },
             {
               "id": "poll-topic-passthrough",
@@ -491,6 +492,18 @@
               "name": "image_prompt",
               "type": "string",
               "value": "={{ $json.image_prompt }}"
+            },
+            {
+              "id": "poll-stage-passthrough",
+              "name": "stage_label",
+              "type": "string",
+              "value": "={{ $json.stage_label }}"
+            },
+            {
+              "id": "poll-headline-passthrough",
+              "name": "headline",
+              "type": "string",
+              "value": "={{ $json.headline }}"
             }
           ]
         }
@@ -559,7 +572,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [ { role: 'system', content: 'You write Instagram captions for a nature page. You output ONLY plain text, no markdown, no surrounding quotes.' }, { role: 'user', content: `Write an Instagram caption for a nature photo of: \"${$('Pollinations - Build Image URL (FREE)').first().json.topic}\". Structure exactly: (1) an emotional 1-2 sentence hook with a fitting emoji, (2) one SEO-friendly descriptive sentence naming the location/subject, (3) a short call-to-action inviting saves/shares/comments, (4) a blank line, then 15-25 relevant SEO hashtags (mix of broad and niche, no repeats). Output ONLY the caption.` } ], temperature: 0.9, max_tokens: 400 }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', reasoning_effort: 'low', messages: [ { role: 'system', content: \"Ти SMM-копірайтер і технічний експерт BramblingTech — IT-компанії, що робить кастомну веб-розробку проєктів з нуля для стартапів і малого та середнього бізнесу: від збору вимог до релізу й підтримки. Пиши грамотною українською мовою. Жодних русизмів і російських слів (наприклад, «переделка», «уровень», «следующий»). Англійські IT-терміни (MVP, QA, CI/CD, API) допустимі. Пишеш експертно й конкретно, без води та кліше. НІКОЛИ не вказуй відсотки, цифри економії чи інші статистичні дані, бо їх нема чим підтвердити. Відповідаєш ЛИШЕ текстом поста, без markdown (без ** і заголовків), без лапок навколо.\" }, { role: 'user', content: `Напиши Instagram-пост на тему: \"${$('Pollinations - Build Image URL (FREE)').first().json.topic}\" (етап: ${$('Code - Build Used-Topics List').first().json.stage}).\\nСтруктура:\\n1) Хук — 1 речення, що влучає в біль замовника, фаундера або продакт-менеджера.\\n2) 3-5 коротких практичних пунктів з досвіду команди, кожен з нового рядка й починається з 🔹. Конкретика: що робимо, чому це економить час і гроші, типові помилки. Без відсотків і цифр.\\n3) Висновок в 1 речення.\\n4) Заклик обговорити проєкт: написати в Direct або перейти за посиланням у профілі.\\n5) Порожній рядок, потім до 10 релевантних хештегів (українською та англійською), обовʼязково #bramblingtech.\\nОбсяг — до 1200 символів. Не вигадуй цифр, кейсів чи назв клієнтів.` } ], temperature: 0.8, max_tokens: 3000 }) }}",
         "options": {
           "timeout": 15000
         }
@@ -579,7 +592,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const raw = $json.choices?.[0]?.message?.content || '';\nreturn [{ json: { caption: raw.trim() } }];"
+        "jsCode": "let raw = ($json.choices?.[0]?.message?.content || '').trim();\n\n// Quality gate: no invented stats, no Russian-only letters. Ask Groq to fix up to 2 times.\nconst problems = t => {\n  const p = [];\n  if (/\\d\\s*%|\\d+\\s*(?:раз|разів|рази)\\b|\\d+\\s*[-–‑]\\s*\\d+\\s*%/i.test(t)) p.push('прибери всі відсотки, цифри економії та статистику');\n  if (/[ыэъё]/i.test(t)) p.push('заміни всі російські слова й літери (ы, э, ъ, ё) на правильні українські');\n  return p;\n};\nfor (let i = 0; i < 2 && problems(raw).length; i++) {\n  const res = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api.groq.com/openai/v1/chat/completions',\n    headers: { Authorization: `Bearer ${$env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },\n    body: {\n      model: 'openai/gpt-oss-120b', reasoning_effort: 'low', temperature: 0.3, max_tokens: 3000,\n      messages: [\n        { role: 'system', content: 'Ти редактор українських текстів. Повертаєш ЛИШЕ виправлений текст поста без коментарів, зберігаючи структуру, емодзі й хештеги.' },\n        { role: 'user', content: `Виправ текст: ${problems(raw).join('; ')}.\\n\\n${raw}` },\n      ],\n    },\n    json: true,\n  });\n  raw = (res.choices?.[0]?.message?.content || raw).trim();\n}\n// Last-resort cleanup of any remaining percentage fragments like \"на 30-40 %\"\nraw = raw.replace(/\\s*(?:на|до|у|в)?\\s*~?\\d+(?:[.,]\\d+)?(?:\\s*[-–‑]\\s*\\d+(?:[.,]\\d+)?)?\\s*%/g, '');\nraw = raw.replace(/\\*\\*/g, '');\n\n// Pull hashtag-only lines out of the body, then rebuild them: max 10, #bramblingtech always first\nconst tagRe = /#[\\p{L}\\p{N}_]+/gu;\nconst bodyLines = [];\nconst tags = [];\nfor (const line of raw.split('\\n')) {\n  const t = line.trim();\n  if (t && t.split(/\\s+/).every(w => w.startsWith('#'))) tags.push(...(t.match(tagRe) || []));\n  else bodyLines.push(line);\n}\nconst uniq = [];\nfor (const tag of ['#bramblingtech', ...tags]) {\n  if (!uniq.some(u => u.toLowerCase() === tag.toLowerCase())) uniq.push(tag);\n}\nconst body = bodyLines.join('\\n').trim().slice(0, 2000);\nreturn [{ json: { caption: `${body}\\n\\n${uniq.slice(0, 10).join(' ')}`, hashtags: uniq.slice(0, 10) } }];"
       },
       "id": "parse-caption",
       "name": "Code - Parse Caption",
@@ -616,7 +629,7 @@
               "id": "m-image-url",
               "name": "image_url",
               "type": "string",
-              "value": "={{ $('Cloudinary - Host Image').first().json.secure_url }}"
+              "value": "={{ $('Cloudinary - Save Branded Image').first().json.secure_url }}"
             },
             {
               "id": "m-ig-user",
@@ -923,9 +936,85 @@
             "Image URL": "={{ $('Merge All Content Fields').first().json.image_url }}",
             "Instagram URL": "={{ $json.permalink }}",
             "Status": "SUCCESS"
-          }
+          },
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prompt",
+              "displayName": "Prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Caption",
+              "displayName": "Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image URL",
+              "displayName": "Image URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Instagram URL",
+              "displayName": "Instagram URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "matchingColumns": []
         },
-        "options": {}
+        "options": {},
+        "authentication": "serviceAccount"
       },
       "id": "log-success",
       "name": "Google Sheets - Log Success Row",
@@ -936,9 +1025,9 @@
         460
       ],
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CRED_ID",
-          "name": "Google Sheets account"
+        "googleApi": {
+          "id": "2JOcPfbbZEVlHlco",
+          "name": "Google Service Account (n8n-950)"
         }
       },
       "onError": "continueErrorOutput",
@@ -956,7 +1045,7 @@
         },
         "sheetName": {
           "__rl": true,
-          "value": "={{ $env.GOOGLE_SHEET_TAB || 'Posts' }}",
+          "value": "={{ $env.GOOGLE_SHEET_TAB || 'posts' }}",
           "mode": "name"
         },
         "columns": {
@@ -970,9 +1059,85 @@
             "Instagram URL": "={{ $json.instagram_url }}",
             "Status": "={{ $json.status }}",
             "Error": "={{ $json.error_message }}"
-          }
+          },
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prompt",
+              "displayName": "Prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Caption",
+              "displayName": "Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image URL",
+              "displayName": "Image URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Instagram URL",
+              "displayName": "Instagram URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "matchingColumns": []
         },
-        "options": {}
+        "options": {},
+        "authentication": "serviceAccount"
       },
       "id": "log-failure",
       "name": "Google Sheets - Log Failure Row",
@@ -983,9 +1148,9 @@
         960
       ],
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "GOOGLE_SHEETS_CRED_ID",
-          "name": "Google Sheets account"
+        "googleApi": {
+          "id": "2JOcPfbbZEVlHlco",
+          "name": "Google Service Account (n8n-950)"
         }
       },
       "onError": "continueErrorOutput",
@@ -1015,7 +1180,8 @@
           "name": "Telegram account"
         }
       },
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "disabled": true
     },
     {
       "parameters": {
@@ -1039,7 +1205,57 @@
           "name": "Telegram account"
         }
       },
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Light brand layout built with Cloudinary transformations:\n// white canvas, rounded photo card, blue stage pill, black headline, optional blue hashtags, blue logo.\n// Colors from bramblingtech.com: #2b59f8 blue, #070707 black, white. Roboto has proper Cyrillic in Cloudinary.\nconst up = $('Cloudinary - Host Image').first().json;\nconst { stage_label, headline } = $('Pollinations - Build Image URL (FREE)').first().json;\n// Cloudinary text layers: URL-encode, then double-escape , and /\nconst enc = s => encodeURIComponent(s).replace(/%2C/g, '%252C').replace(/%2F/g, '%252F');\n\n// Sometimes (about half the posts) show 2 short topical hashtags + #bramblingtech on the image\nconst topical = ($json.hashtags || []).filter(h => h.toLowerCase() !== '#bramblingtech' && h.length <= 18);\nconst showTags = Math.random() < 0.5 && topical.length >= 2;\nconst tagLine = showTags ? ['#bramblingtech', ...topical.slice(0, 2)].join('  ') : '';\n\nconst t = [\n  'c_crop,g_north,w_1.0,h_0.93',                 // cut off the Pollinations watermark strip\n  'c_fill,g_auto,w_1000,h_560',\n  'r_28',\n  'c_mpad,w_1000,h_600,g_south,b_white',         // 40px top margin\n  'c_mpad,w_1080,h_1080,g_north,b_white',        // white canvas below the photo\n  `l_text:Roboto_24_bold_letter_spacing_3:${enc(' ' + stage_label.toUpperCase() + ' ')},co_white,b_rgb:2b59f8,bo_12px_solid_rgb:2b59f8/fl_layer_apply,g_north_west,x_52,y_640`,\n  `l_text:Roboto_60_bold_line_spacing_-4:${enc(headline)},co_rgb:070707,c_fit,w_990,h_240/fl_layer_apply,g_north_west,x_40,y_705`,\n  ...(tagLine ? [`l_text:Roboto_26_bold:${enc(tagLine)},co_rgb:2b59f8/fl_layer_apply,g_south_west,x_40,y_62`] : []),\n  // Original blue logo from bramblingtech.com (brand/bramblingtech-logo.svg), uploaded to Cloudinary with this public_id\n  'l_bramblingtech-logo,w_210/fl_layer_apply,g_south_east,x_40,y_48',\n  'f_jpg,q_90',\n];\nconst branded_image_url = `https://res.cloudinary.com/${$env.CLOUDINARY_CLOUD_NAME}/image/upload/${t.join('/')}/${up.public_id}.jpg`;\nreturn [{ json: { ...$json, branded_image_url } }];"
+      },
+      "id": "code-branded-image",
+      "name": "Code - Build Branded Image",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.cloudinary.com/v1_1/{{ $env.CLOUDINARY_CLOUD_NAME }}/image/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formData",
+              "name": "file",
+              "value": "={{ $json.branded_image_url }}"
+            },
+            {
+              "name": "upload_preset",
+              "value": "={{ $env.CLOUDINARY_UPLOAD_PRESET }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "cloudinary-save-branded",
+      "name": "Cloudinary - Save Branded Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1260,
+        960
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     }
   ],
   "connections": {
@@ -1254,7 +1470,7 @@
       "main": [
         [
           {
-            "node": "Merge All Content Fields",
+            "node": "Code - Build Branded Image",
             "type": "main",
             "index": 0
           }
@@ -1418,6 +1634,35 @@
         [
           {
             "node": "Telegram - Send Failure Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Build Branded Image": {
+      "main": [
+        [
+          {
+            "node": "Cloudinary - Save Branded Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cloudinary - Save Branded Image": {
+      "main": [
+        [
+          {
+            "node": "Merge All Content Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Format Error Details",
             "type": "main",
             "index": 0
           }

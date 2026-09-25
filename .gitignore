@@ -2,3 +2,4 @@
 *.backup.json
 n8n.log
 google-service-account.json
+PROGRESS.md
